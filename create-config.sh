@@ -9,6 +9,7 @@ backend {NAME}
   option forwardfor
   http-request add-header X-Forwarded-Proto https if { ssl_fc }
   http-request set-header X-Forwarded-Port %[dst_port]
+  http-request set-path \"%[path,regsub(^/{PATH}/,/)]\"
   server-template {NAME} {NUM} {DNS_NAME} resolvers mydns check init-addr none"
 
 frontend_block="
@@ -31,12 +32,15 @@ for row in $(echo "${input}" | jq -r '.[] | @base64'); do
    number=$(_jq '.number')
    dns=$(_jq '.dns')
    name=$(_jq '.name')
+
    backend_replaced=$(echo "$backend_block" | sed -e "s|{NAME}|$name|g")
    backend_replaced=$(echo "$backend_replaced" | sed -e "s|{NUM}|$number|g")
    backend_replaced=$(echo "$backend_replaced" | sed -e "s|{DNS_NAME}|$dns|g")
+   backend_replaced=$(echo "$backend_replaced" | sed -e "s|{PATH}|$path|g")
+   
    frontend_replaced=$(echo "$frontend_block" | sed -e "s|{NAME}|$name|g")
    frontend_replaced=$(echo "$frontend_replaced" | sed -e "s|{PATH}|$path|g")
-   #replaced=$(echo "$locationblock" | sed -e "s|{folder}|$folder|g")
+
    BACKENDS="$BACKENDS $backend_replaced"
    FRONTENDS="$FRONTENDS $frontend_replaced"
 done
